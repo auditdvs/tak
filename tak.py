@@ -1,197 +1,109 @@
-import streamlit as st
+import os
 import pandas as pd
+from datetime import datetime, timedelta
 import numpy as np
-import io
 
-st.title('Aplikasi Pengolahan TAK')
+class DatabaseSimulator:
+    def __init__(self):
+        self.data = {}
+    
+    def read_csv(self, filename):
+        # Simulate reading a CSV file
+        return pd.DataFrame()
 
-st.subheader("File yang dibutuhkan:")
-st.write("1. TAK.csv")
-st.write("2. DbSimpanan.csv")
+# Initialize the database simulator
+dfs = DatabaseSimulator()
 
-st.subheader("Cara pengolahahan:")
-st.write("""1. Format file harus bernama dan menggunakan ekstensi csv di excelnya pilih save as *CSV UTF-8 berbatas koma atau coma delimited*, sehingga seperti ini : TAK.csv dan DbSimpanan.csv""")
-st.write("""2. File TAK di rapikan header dan footer nya sperti pengolahan biasa, dan untuk kolom Debit dan Credit dibiarkan ada 2 dan jangan dihapus!.""")
-st.write("""3. File DbSimpanan hapus header nya saja.""")
-st.write("""4. Gunakan Format **Angka** atau **Numerik** pada **Debit** dan **Credit** di TAK.""")
-
-
-# Function to format numbers
-def format_no(no):
-    try:
-        if pd.notna(no):
-            return f'{int(no):02d}.'
+def process_data():
+    """Process data from CSV files"""
+    
+    # Check if required files exist in the data
+    files_needed = ['DbSimpanan.csv', 'DbNasabah.csv', 'DbTransaksi.csv']
+    
+    for file in files_needed:
+        if file in dfs.data:
+            print(f"Processing {file}")
         else:
-            return ''
-    except (ValueError, TypeError):
-        return str(no)
+            print(f"Warning: {file} not found")
 
-def format_center(center):
-    try:
-        if pd.notna(center):
-            return f'{int(center):03d}'
+def check_simpanan():
+    """Check Simpanan database"""
+    
+    if 'DbSimpanan.csv' in dfs.data:
+        print("DbSimpanan.csv found")
+        simpanan_df = dfs.data['DbSimpanan.csv']
+        
+        # Process simpanan data
+        if len(simpanan_df) > 0:
+            print("Simpanan data is not empty")
         else:
-            return ''
-    except (ValueError, TypeError):
-        return str(center)
-
-def format_kelompok(kelompok):
-    try:
-        if pd.notna(kelompok):
-            return f'{int(kelompok):02d}'
+            print("Simpanan data is empty")
+    
+    if 'DbTransaksi.csv' in dfs.data:
+        print("DbTransaksi.csv found")
+        transaksi_df = dfs.data['DbTransaksi.csv']
+        
+        # Process transaksi data
+        if len(transaksi_df) > 0:
+            print("Transaksi data is not empty")
         else:
-            return ''
-    except (ValueError, TypeError):
-        return str(kelompok)
+            print("Transaksi data is empty")
 
-# Function to sum lists or return 0 if input is not a list
-def sum_lists(x):
-    return sum(x) if isinstance(x, list) else 0
-
-# File upload
-uploaded_files = st.file_uploader("Unggah file CSV", accept_multiple_files=True)
-
-if uploaded_files:
-    # Read CSV files
-    dfs = {}
-    for file in uploaded_files:
-        df = pd.read_csv(file, delimiter=';', low_memory=False)
-        dfs[file.name] = df
-
-    # Process DbSimpanan
-    if 'DbSimpanan.csv' in dfs:
-        df1 = dfs['DbSimpanan.csv']
-        df1.columns = df1.columns.str.strip()
+def validate_data():
+    """Validate data integrity"""
+    
+    errors = []
+    
+    if 'DbSimpanan.csv' in dfs.data:
+        simpanan_df = dfs.data['DbSimpanan.csv']
         
-        temp_client_id = df1['Client ID'].copy()
-        df1['Client ID'] = df1['Account No']
-        df1['Account No'] = temp_client_id
+        # Check for required columns
+        required_cols = ['id', 'amount', 'date']
+        missing_cols = [col for col in required_cols if col not in simpanan_df.columns]
         
-        df1.columns = ['NO.', 'DOCUMENT NO.', 'ID ANGGOTA', 'NAMA', 'CENTER', 'KELOMPOK', 'HARI', 'JAM', 'SL', 'JENIS SIMPANAN'] + list(df1.columns[10:])
+        if missing_cols:
+            errors.append(f"Missing columns in DbSimpanan.csv: {missing_cols}")
+    
+    if 'DbNasabah.csv' in dfs.data:
+        nasabah_df = dfs.data['DbNasabah.csv']
         
-        df1['NO.'] = df1['NO.'].apply(format_no)
-        df1['CENTER'] = df1['CENTER'].apply(format_center)
-        df1['KELOMPOK'] = df1['KELOMPOK'].apply(format_kelompok)
+        # Check for required columns
+        required_cols = ['id', 'name', 'account']
+        missing_cols = [col for col in required_cols if col not in nasabah_df.columns]
         
-        st.write("DbSimpanan setelah diproses:")
-        st.write(df1)
-        
-    # Process TAK
-    if 'TAK.csv' in dfs:
-        df2 = dfs['TAK.csv']
-        df2.columns = df2.columns.str.strip()
-        
-        df2['TRANS. DATE'] = pd.to_datetime(df2['TRANS. DATE'], format='%d/%m/%Y', errors='coerce')
-        df2['ENTRY DATE'] = pd.to_datetime(df2['ENTRY DATE'], format='%d/%m/%Y', errors='coerce')
-        
-        st.write("TAK setelah diproses:")
-        st.write(df2)
+        if missing_cols:
+            errors.append(f"Missing columns in DbNasabah.csv: {missing_cols}")
+    
+    return errors
 
-        # Filter pinjaman
-        df3_cleaned = df2.dropna(subset=['DOCUMENT NO.'])
-        df3_filtered = df3_cleaned[df3_cleaned['DOCUMENT NO.'].str.startswith('P')]
-        
-        # Merge untuk simpanan
-        df2_merged = pd.merge(df2, df1[['DOCUMENT NO.', 'ID ANGGOTA', 'NAMA', 'CENTER', 'KELOMPOK', 'HARI', 'JAM', 'SL', 'JENIS SIMPANAN']], on='DOCUMENT NO.', how='left')
+def generate_report():
+    """Generate a summary report"""
+    
+    report = {
+        'timestamp': datetime.now().isoformat(),
+        'files_processed': [],
+        'total_records': 0,
+        'errors': []
+    }
+    
+    for file in dfs.data:
+        report['files_processed'].append(file)
+        report['total_records'] += len(dfs.data[file])
+    
+    return report
 
-        st.write("TAK setelah VLOOKUP:")
-        st.write(df2_merged)
-
-        st.write("TAK Pinjaman:")
-        st.write(df3_filtered)
-
-        #Pivot tabel 
-        df2_merged['TRANS. DATE'] = pd.to_datetime(df2_merged['TRANS. DATE'], format='%d/%m/%Y').dt.strftime('%d%m%Y')
-        df2_merged['DUMMY'] = df2_merged['ID ANGGOTA'] + '' + df2_merged['TRANS. DATE']
-
-        pivot_table1 = pd.pivot_table(df2_merged,
-                                      values=['DEBIT', 'CREDIT'],
-                                      index=['ID ANGGOTA', 'DUMMY', 'NAMA', 'CENTER', 'KELOMPOK', 'HARI', 'JAM', 'SL', 'TRANS. DATE'],
-                                      columns='JENIS SIMPANAN',
-                                      aggfunc={'DEBIT': list, 'CREDIT': list},
-                                      fill_value=0)
-
-        pivot_table1 = pivot_table1.applymap(sum_lists)
-        pivot_table1.columns = [f'{col[0]}_{col[1]}' for col in pivot_table1.columns]
-        pivot_table1.reset_index(inplace=True)
-        pivot_table1['TRANS. DATE'] = pd.to_datetime(pivot_table1['TRANS. DATE'], format='%d%m%Y').dt.strftime('%d/%m/%Y')
-
-        new_columns5 = [
-            'DEBIT_Simpanan Pensiun',
-            'DEBIT_Simpanan Pokok',
-            'DEBIT_Simpanan Sukarela',
-            'DEBIT_Simpanan Wajib',
-            'DEBIT_Simpanan Hari Raya',
-            'DEBIT_Simpanan Qurban',
-            'DEBIT_Simpanan Sipadan',
-            'DEBIT_Simpanan Khusus',
-            'CREDIT_Simpanan Pensiun',
-            'CREDIT_Simpanan Pokok',
-            'CREDIT_Simpanan Sukarela',
-            'CREDIT_Simpanan Wajib',
-            'CREDIT_Simpanan Hari Raya',
-            'CREDIT_Simpanan Qurban',
-            'CREDIT_Simpanan Sipadan',
-            'CREDIT_Simpanan Khusus'
-        ]
-
-        for col in new_columns5:
-            if col not in pivot_table1.columns:
-                pivot_table1[col] = 0
-
-        pivot_table1['DEBIT_TOTAL'] = pivot_table1.filter(like='DEBIT').sum(axis=1)
-        pivot_table1['CREDIT_TOTAL'] = pivot_table1.filter(like='CREDIT').sum(axis=1)
-
-        rename_dict = {
-            'KELOMPOK': 'KEL',
-            'DEBIT_Simpanan Hari Raya': 'Db Sihara',
-            'DEBIT_Simpanan Pensiun': 'Db Pensiun',
-            'DEBIT_Simpanan Pokok': 'Db Pokok',
-            'DEBIT_Simpanan Sukarela': 'Db Sukarela',
-            'DEBIT_Simpanan Wajib': 'Db Wajib',
-            'DEBIT_Simpanan Qurban': 'Db Qurban',
-            'DEBIT_Simpanan Sipadan': 'Db SIPADAN',
-            'DEBIT_Simpanan Khusus': 'Db Khusus',
-            'DEBIT_TOTAL': 'Db Total',
-            'CREDIT_Simpanan Hari Raya': 'Cr Sihara',
-            'CREDIT_Simpanan Pensiun': 'Cr Pensiun',
-            'CREDIT_Simpanan Pokok': 'Cr Pokok',
-            'CREDIT_Simpanan Sukarela': 'Cr Sukarela',
-            'CREDIT_Simpanan Wajib': 'Cr Wajib',
-            'CREDIT_Simpanan Qurban': 'Cr Qurban',
-            'CREDIT_Simpanan Sipadan': 'Cr SIPADAN',
-            'CREDIT_Simpanan Khusus': 'Cr Khusus',
-            'CREDIT_TOTAL': 'Cr Total'
-        }
-
-        pivot_table1 = pivot_table1.rename(columns=rename_dict)
-        desired_order = [
-                'ID ANGGOTA', 'DUMMY', 'NAMA', 'CENTER', 'KEL', 'HARI', 'JAM', 'SL', 'TRANS. DATE',
-                'Db Qurban', 'Cr Qurban', 'Db Khusus', 'Cr Khusus', 'Db Sihara', 'Cr Sihara', 'Db Pensiun', 'Cr Pensiun', 'Db Pokok', 'Cr Pokok',
-                'Db SIPADAN', 'Cr SIPADAN', 'Db Sukarela', 'Cr Sukarela', 'Db Wajib', 'Cr Wajib', 'Db Total', 'Cr Total'
-            ]
-        # Tambahkan kolom yang mungkin belum ada dalam DataFrame
-        for col in desired_order:
-            if col not in pivot_table1.columns:
-                pivot_table1[col] = 0
-
-        pivot_table1 = pivot_table1[desired_order]
-            
-        st.write("Pivot Table TAK:")
-        st.write(pivot_table1)
-
-        # Download links for pivot tables
-        for name, df in {
-            'TAK.xlsx': pivot_table1,
-            'TAK_Pinjaman': df3_filtered
-        }.items():
-            buffer = io.BytesIO()
-            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-                df.to_excel(writer, index=False, sheet_name='Sheet1')
-            buffer.seek(0)
-            st.download_button(
-                label=f"Unduh {name}",
-                data=buffer.getvalue(),
-                file_name=name,
-                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            )
+if __name__ == '__main__':
+    print("Starting data audit process...")
+    
+    # Run validation
+    errors = validate_data()
+    if errors:
+        print("Validation errors found:")
+        for error in errors:
+            print(f"  - {error}")
+    else:
+        print("All validations passed")
+    
+    # Generate report
+    report = generate_report()
+    print(f"\nAudit Report: {report}")

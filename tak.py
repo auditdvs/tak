@@ -60,21 +60,21 @@ if uploaded_files:
 
     # Process DbSimpanan
     if 'DbSimpanan.csv' in dfs:
-            df1 = dfs['DbSimpanan.csv']
-            df1.columns = df1.columns.str.strip()
+        df1 = dfs['DbSimpanan.csv']
+        df1.columns = df1.columns.str.strip()
         
-            temp_client_id = df1['Client ID'].copy()
-            df1['Client ID'] = df1['Account No']
-            df1['Account No'] = temp_client_id
+        temp_client_id = df1['Client ID'].copy()
+        df1['Client ID'] = df1['Account No']
+        df1['Account No'] = temp_client_id
         
-            df1.columns = ['NO.', 'DOCUMENT NO.', 'ID ANGGOTA', 'NAMA', 'CENTER', 'KELOMPOK', 'HARI', 'JAM', 'SL', 'JENIS SIMPANAN'] + list(df1.columns[10:])
+        df1.columns = ['NO.', 'DOCUMENT NO.', 'ID ANGGOTA', 'NAMA', 'CENTER', 'KELOMPOK', 'HARI', 'JAM', 'SL', 'JENIS SIMPANAN'] + list(df1.columns[10:])
         
-            df1['NO.'] = df1['NO.'].apply(format_no)
-            df1['CENTER'] = df1['CENTER'].apply(format_center)
-            df1['KELOMPOK'] = df1['KELOMPOK'].apply(format_kelompok)
+        df1['NO.'] = df1['NO.'].apply(format_no)
+        df1['CENTER'] = df1['CENTER'].apply(format_center)
+        df1['KELOMPOK'] = df1['KELOMPOK'].apply(format_kelompok)
         
-            st.write("DbSimpanan setelah diproses:")
-            st.write(df1)
+        st.write("DbSimpanan setelah diproses:")
+        st.write(df1)
         
     # Process TAK
     if 'TAK.csv' in dfs:
